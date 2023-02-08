@@ -1,0 +1,16 @@
+_target_: src.models.LitModel
+
+arch: resnet50
+learning_rate: 0.001
+weight_decay: 0.01
+schedule: cos
+head_depth: 1
+head_width: 64
+optimizer: adamw
+use_frozen_bb: False
+layers_to_finetune: []
+reinit_layers: False
+
+max_epochs: ${trainer.max_epochs}
+dataset: ${datamodule.dataset}
+mode: ${mode}

@@ -1,0 +1,10 @@
+_target_: src.datamodules.DataModule
+data_dir: ${data_dir}
+batch_size: 256
+num_workers: 10
+prefetch_factor: 2
+dataset: cifar10
+do_active_learning: False
+input_size: 224
+n_examples_in_subset: null
+query_budget: ${active_learning.query_budget}

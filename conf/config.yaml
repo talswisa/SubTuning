@@ -1,0 +1,14 @@
+defaults:
+  - trainer: default.yaml
+  - datamodule: datamodule.yaml
+  - model: net.yaml
+  - active_learning: active_learning.yaml
+  - logger: wandb.yaml
+  - hydra: default.yaml
+  - _self_
+
+mode: finetune
+work_dir: ${hydra:runtime.cwd}
+
+# path to folder with data
+data_dir: ${work_dir}/data/

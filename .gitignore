@@ -1,0 +1,11 @@
+multirun
+outputs
+data/*
+files
+__pycache__*
+*.pyc
+*.pyo
+wandb
+models
+checkpoints*
+model.txt
