@@ -9,9 +9,8 @@ from torchvision import models
 from torchvision.models import ResNet50_Weights, vit_b_16
 
 from src.model_utils import SelectiveFinetuneResNet, SelectiveFinetuneViT
-import wandb
 from src.datamodules import SUPPORTED_DATASETS_CLASSES
-
+from src.pruning import prune_resnet
 
 def get_num_classes(dataset):
     if dataset.lower() in SUPPORTED_DATASETS_CLASSES:
@@ -59,7 +58,8 @@ def get_model(model_name,
               sidenet_level=3,
               use_frozen_bb=True,
               layers_to_finetune=None,
-              reinit_layers=False):
+              reinit_layers=False,
+              pruning_params=None):
 
     if model_name == "resnet50":
         weights = ResNet50_Weights.IMAGENET1K_V2
@@ -91,24 +91,29 @@ def get_model(model_name,
         model = model_class(backbone,
                             head_params=head_params,
                             layers_to_finetune=layers_to_finetune,
-                            use_freeze_bb=use_frozen_bb,
+                            use_frozen_bb=use_frozen_bb,
                             reinit_layers=reinit_layers)
     elif mode == 'finetune':
         layers_to_finetune = model_layers
         model = model_class(backbone,
                             head_params=head_params,
                             layers_to_finetune=layers_to_finetune,
-                            use_freeze_bb=use_frozen_bb,
+                            use_frozen_bb=use_frozen_bb,
                             reinit_layers=reinit_layers)
     elif mode == 'finetune_layers':
         model = model_class(backbone,
                             head_params=head_params,
                             layers_to_finetune=layers_to_finetune,
-                            use_freeze_bb=use_frozen_bb,
+                            use_frozen_bb=use_frozen_bb,
                             reinit_layers=reinit_layers)
     else:
         raise ValueError(
             f"mode must be in ['linear', 'finetune', 'finetune_layers'], but got {mode}")
+
+    if pruning_params.use:
+        assert model_name == "resnet50", "Pruning is only supported for ResNet-50"
+        assert use_frozen_bb == False, "Pruning is not supported with siamese"
+        model = prune_resnet(model=model, **pruning_params)
 
     return model
 
@@ -129,7 +134,8 @@ class LitModel(pl.LightningModule):
                  sidenet_level: int = 3,
                  use_frozen_bb: bool = True,
                  layers_to_finetune: list = None,
-                 reinit_layers: bool = False):
+                 reinit_layers: bool = False,
+                 pruning_params: dict = None):
         super().__init__()
         assert mode in ['linear', 'finetune', 'finetune_layers']
 
@@ -145,6 +151,7 @@ class LitModel(pl.LightningModule):
             use_frozen_bb=use_frozen_bb,
             layers_to_finetune=layers_to_finetune,
             reinit_layers=reinit_layers,
+            pruning_params=pruning_params,
         )
         self.initialize_model()
         with open('model.txt', 'w') as fp:

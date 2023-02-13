@@ -10,6 +10,13 @@ optimizer: adamw
 use_frozen_bb: False
 layers_to_finetune: []
 reinit_layers: False
+pruning_params:
+  use: False
+  amount_to_prune: 0.5
+  pruner_type: "local"
+  pruning_norm: 1
+
+
 
 max_epochs: ${trainer.max_epochs}
 dataset: ${datamodule.dataset}

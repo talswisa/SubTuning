@@ -20,14 +20,14 @@ class SelectiveFinetune(nn.Module):
                  backbone,
                  head_params,
                  layers_to_finetune=None,
-                 use_freeze_bb=False,
+                 use_frozen_bb=False,
                  reinit_layers=False):
         super().__init__()
         self.backbone = backbone
         self.frozen_backbone = None
         self.head_params = head_params
         self.layers_to_finetune = layers_to_finetune
-        self.use_frozen_bb = use_freeze_bb
+        self.use_frozen_bb = use_frozen_bb
         self.reinit_layers = reinit_layers
         self.original_representation_size = self.get_representation_size()
         if self.use_frozen_bb:
@@ -107,9 +107,9 @@ class SelectiveFinetuneResNet(SelectiveFinetune):
                  backbone,
                  head_params,
                  layers_to_finetune=None,
-                 use_freeze_bb=False,
+                 use_frozen_bb=False,
                  reinit_layers=False):
-        super().__init__(backbone, head_params, layers_to_finetune, use_freeze_bb, reinit_layers)
+        super().__init__(backbone, head_params, layers_to_finetune, use_frozen_bb, reinit_layers)
 
     def get_representation_size(self):
         return self.backbone.fc.in_features
@@ -120,7 +120,7 @@ class SelectiveFinetuneResNet(SelectiveFinetune):
             self.frozen_backbone.fc = nn.Identity()
 
     def handle_frozen_backbone(self):
-        if self.freeze_backbone_and_reinit:
+        if self.use_frozen_bb:
             self.duplicate_backbone()
         self.freeze_backbone_and_reinit()
         ## Save weights for comparison later
@@ -152,9 +152,9 @@ class SelectiveFinetuneViT(SelectiveFinetune):
                  backbone,
                  head_params,
                  layers_to_finetune=None,
-                 use_freeze_bb=False,
+                 use_frozen_bb=False,
                  reinit_layers=True):
-        super().__init__(backbone, head_params, layers_to_finetune, use_freeze_bb, reinit_layers)
+        super().__init__(backbone, head_params, layers_to_finetune, use_frozen_bb, reinit_layers)
 
     def get_representation_size(self):
         return self.backbone.heads.head.in_features
