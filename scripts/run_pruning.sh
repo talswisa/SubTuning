@@ -17,7 +17,8 @@ python ./run.py -m \
     mode='finetune_layers' \
     model.layers_to_finetune="[layer4_0, layer4_1, layer4_2]" \
     model.pruning_params.use=true \
-    model.pruning_params.amount_to_prune=0.95 \
+    model.pruning_params.amount_to_prune=0.5 \
     model.pruning_params.pruning_norm=1 \
+    model.pruning_params.pruner_type='local' \
     $OTHER_PARAMS
 

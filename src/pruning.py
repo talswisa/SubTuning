@@ -7,7 +7,9 @@ try:
     sys.path.append('/home/jovyan/finetune/Torch-Pruning')  # https://github.com/VainF/Torch-Pruning
     import torch_pruning as tp
 except:
-    print("can't import torch pruning, please clone branch v.0.2.8 from https://github.com/VainF/Torch-Pruning, and add it to your system path.")
+    print(
+        "can't import torch pruning, please clone branch v.0.2.8 from https://github.com/VainF/Torch-Pruning, and add it to your system path."
+    )
 
 
 def prune_resnet(model, amount_to_prune=0.5, pruner_type='local', pruning_norm=1, *args, **kwargs):
@@ -19,7 +21,10 @@ def prune_resnet(model, amount_to_prune=0.5, pruner_type='local', pruning_norm=1
     # the pruning library does not work well with the head so we are temporary removing in, will create a new head after the pruning
     model.head = nn.Identity()
     layer = getattr(model.backbone, "layer4")
-    prune_model(layer, ch_sparsity=amount_to_prune, pruner_type=pruner_type, pruning_norm=pruning_norm)
+    prune_model(layer,
+                ch_sparsity=amount_to_prune,
+                pruner_type=pruner_type,
+                pruning_norm=pruning_norm)
 
     # create a new head with the correct input size
     last_layer = getattr(model.backbone, "layer4")[-1]
@@ -33,13 +38,11 @@ def prune_resnet(model, amount_to_prune=0.5, pruner_type='local', pruning_norm=1
 
 
 def prune_model(layer, ch_sparsity=0.5, pruning_norm=1, pruner_type='local'):
-    orig_params = sum(p.numel() for p in layer.parameters())
     n_blocks = len(layer)
     resolution = 14 * (2**(n_blocks - 1))
     in_channels = 1024
     example_inputs = torch.randn(1, in_channels, resolution, resolution)
 
-    print("defining pruner")
     if pruner_type == 'local':
         pruner = tp.pruner.LocalMagnitudePruner(
             layer,
@@ -58,12 +61,10 @@ def prune_model(layer, ch_sparsity=0.5, pruning_norm=1, pruner_type='local'):
             max_ch_sparsity=0.9,
             ch_sparsity=ch_sparsity,  # channel sparsity
             ignored_layers=[],  # ignored_layers will not be pruned
-            )
+        )
     else:
         raise ("only local and global pruner_type are supported")
     pruner.step()
-    print(f'new layer params: {sum(p.numel() for p in layer.parameters()):,d} old layer params: {orig_params:,d}')
-
 
 def print_model_to_file(model, file_path):
     original_stdout = sys.stdout
