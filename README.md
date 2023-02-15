@@ -23,6 +23,8 @@ For example, to create a finetune profile for ResNet50, run the following comman
 ```
 bash scripts/run_finetune_profile_resnet50.sh
 ```
+To run the inference time experiments, run the src/latency.py file.
+
 If you have any issues or questions, please create a git issue.
 
 ## Citation
