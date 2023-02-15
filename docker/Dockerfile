@@ -14,4 +14,3 @@ RUN pip install numpy==1.21.0
 RUN git clone -b v.0.2.8 https://github.com/VainF/Torch-Pruning /opt/ml/code/Torch-Pruning
 ENV PYTHONPATH="$PYTHONPATH:/opt/ml/code/Torch-Pruning"
 RUN pip install thop # for the pruning
-RUN pip install git+https://github.com/ildoonet/pytorch-gradual-warmup-lr.git
