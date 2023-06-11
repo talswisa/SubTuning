@@ -1,8 +1,8 @@
-# SubTuning: Efficient Finetuning for Multi-Task Learning
+# Less is More: Selective Layer Finetuning with SubTuning
 
 [[Paper]](https://arxiv.org/abs/2302.06354)
 
-SubTuning (Subset Finetuning) is a simple and efficient method for multi-task learning that allows for the deployment of new tasks at minimal computational cost. With SubTuning, different tasks do not interfere with one another and yet share most of the resources at inference time. This method is demonstrated to achieve accuracy comparable to full finetuning of the model, and even surpasses the performance of full finetuning when training data is scarce.
+SubTuning is a parameter-efficient method for fine-tuning pretrained neural networks. It selectively trains specific layers while keeping others at their pre-trained state, optimizing performance based on the task and data distribution. Compared to conventional fine-tuning, SubTuning excels in scenarios with scarce or corrupted data and often matches the performance of traditional fine-tuning with abundant data. It has been successfully applied across various tasks, architectures, and pre-training methods.
 ## Approach
 ![SubTuning](SubTuning.png)
 
