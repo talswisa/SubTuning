@@ -18,12 +18,14 @@ docker run --rm -it subtuningimage
 ```
 3. insert your WandB entity, API key, and project name in the wandb.text file located in the project directory.
 
-4.  run experiments using the provided bash scripts. The hyperparameters in the bash scripts can be modified. For instance, by changing the value of _model.layers_to_finetune_ in the _run_active_learning.sh_ bash script, you can choose the layers to fine-tune.
+4.  run experiments using the provided bash scripts. The hyperparameters in the bash scripts can be modified. For instance, by changing the value of _model.layers_to_finetune_, you can choose the layers to fine-tune.
 For example, to create a finetune profile for ResNet50, run the following command:
 ```
-bash scripts/run_finetune_profile_resnet50.sh
+bash scripts/greedy_subtuning_vit_cifar100.sh
 ```
-To run the inference time experiments, run the src/latency.py file.
+
+To create the VTAB-1k data, run the `get_pytorch_versions_of_vtab.py` script.
+
 
 If you have any issues or questions, please create a git issue.
 
