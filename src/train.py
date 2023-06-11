@@ -2,6 +2,7 @@ import hydra
 import wandb
 import logging
 import random
+from pytorch_lightning.loggers import CometLogger
 
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, Trainer
@@ -11,8 +12,6 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from src.models import LitModel
 from src.utils import log_hyperparams
-from src.callbacks import ActiveLearning
-
 
 log = logging.getLogger(__name__)
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
@@ -29,43 +28,27 @@ def get_checkpointing_callback(config):
     return checkpoint_callback
 
 
-def train(config: DictConfig):
+def train(config: DictConfig, model=None):
     log.info(f"Instantiating logger <{config.logger._target_}>")
 
     current_name = f"{config.datamodule.dataset}:{config.model.arch}:{config.mode}"
     if config.mode == "finetune_layers":
         current_name += f":{config.model.layers_to_finetune}"
-    if config.datamodule.do_active_learning:
-        current_name += f":active_learning"
 
     logger: WandbLogger = hydra.utils.instantiate(config.logger, name=current_name)
 
-    log.info(f"Instantiating trainer <{config.trainer._target_}>")
-
-    lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    checkpointer = get_checkpointing_callback(config)
-
-    trainer: Trainer = hydra.utils.instantiate(config.trainer,
-                                               logger=logger,
-                                               num_sanity_val_steps=0,
-                                               callbacks=[lr_monitor, checkpointer])
-    print(f'precision {trainer.precision}')
-
-    log.info(f"Instantiating model <{config.model._target_}>")
-    model: LitModel = hydra.utils.instantiate(config.model)
-
     log.info(f"Instantiating datamodule <{config.datamodule._target_}>")
-
     datamodule: LightningDataModule = hydra.utils.instantiate(config.datamodule)
+
+    if model is None:
+        log.info(f"Instantiating model <{config.model._target_}>")
+        model: LitModel = hydra.utils.instantiate(config.model)
 
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
     checkpointer = get_checkpointing_callback(config)
     callbacks = [lr_monitor, checkpointer]
 
-    if config.datamodule.do_active_learning:
-        active_learning_callback = ActiveLearning(config.active_learning)
-        callbacks.append(active_learning_callback)
-
+    log.info(f"Instantiating trainer <{config.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(
         config.trainer,
         logger=logger,
@@ -73,7 +56,7 @@ def train(config: DictConfig):
         callbacks=callbacks,
     )
     print(f"precision {trainer.precision}")
-    
+
     log.info("Logging hyperparameters!")
     log_hyperparams(config=config, trainer=trainer)
 
@@ -81,3 +64,7 @@ def train(config: DictConfig):
     trainer.fit(model=model, datamodule=datamodule)
 
     wandb.finish()
+
+    acc = trainer.callback_metrics["pred_acc"]
+
+    return acc.item()

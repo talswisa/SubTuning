@@ -2,13 +2,20 @@ defaults:
   - trainer: default.yaml
   - datamodule: datamodule.yaml
   - model: net.yaml
-  - active_learning: active_learning.yaml
   - logger: wandb.yaml
   - hydra: default.yaml
   - _self_
+
+greedy_subset_selection: false
+greedy_cross_val: false
+greedy_eposilon: 0.01
+greedy_start: non  # `non` to start with LP, `all` to start with FT, `best` to try both and choose the best
+find_best_lora: False
 
 mode: finetune
 work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data
 data_dir: ${work_dir}/data/
+
+to_report: false  # easy way to find results of final trainings

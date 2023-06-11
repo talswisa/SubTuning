@@ -19,7 +19,12 @@ def filter_config(config: DictConfig) -> dict:
 def log_hyperparams(config: DictConfig, trainer: Trainer) -> None:
     hparams = {}
     # choose which parts of hydra config will be saved to loggers as hyperparameters
-    for key in ["trainer", "model", "datamodule", "active_learning"]:
+    for key in ["trainer", "model", "datamodule"]:
         hparams[key] = filter_config(config[key])
+
+    # add paramters in conf/config.yaml
+    for k, v in config.items():
+        if not isinstance(v, DictConfig):
+            hparams[k] = v
 
     trainer.logger.log_hyperparams(hparams)

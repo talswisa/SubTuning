@@ -6,11 +6,12 @@ from torch import nn
 import torch.optim.lr_scheduler as lr_sched
 from torch.nn.functional import softmax
 from torchvision import models
-from torchvision.models import ResNet50_Weights, vit_b_16
+from torchvision.models import ResNet50_Weights
+import timm
 
 from src.model_utils import SelectiveFinetuneResNet, SelectiveFinetuneViT
 from src.datamodules import SUPPORTED_DATASETS_CLASSES
-from src.pruning import prune_resnet
+
 
 def get_num_classes(dataset):
     if dataset.lower() in SUPPORTED_DATASETS_CLASSES:
@@ -29,17 +30,13 @@ MODEL_LAYERS = {
         "layer1_0", "layer1_1", "layer2_0"
         "layer2_1", "layer3_0", "layer3_1", "layer4_0", "layer4_1"
     ],
-    "vit_b_16": [
-        "encoder_layer_0", "encoder_layer_1", "encoder_layer_2", "encoder_layer_3",
-        "encoder_layer_4", "encoder_layer_5", "encoder_layer_6", "encoder_layer_7",
-        "encoder_layer_8", "encoder_layer_9", "encoder_layer_10", "encoder_layer_11"
-    ],
+    "vit_b_16": list(range(12)),
 }
 
 
-def get_head_params(model_name, backbone, num_classes, head_depth, head_width, sidenet_level):
+def get_head_params(model_name, backbone, num_classes, head_depth, head_width):
     in_features = backbone.fc.in_features if "resnet" in model_name.lower(
-    ) else backbone.heads.head.in_features  # Assumes the possible models are resnet or vit
+    ) else backbone.head.in_features  # Assumes the possible models are resnet or vit
 
     head_params = {
         "in_features": in_features,
@@ -50,70 +47,89 @@ def get_head_params(model_name, backbone, num_classes, head_depth, head_width, s
     return head_params
 
 
-def get_model(model_name,
-              num_classes,
-              mode,
-              head_width,
-              head_depth,
-              sidenet_level=3,
-              use_frozen_bb=True,
-              layers_to_finetune=None,
-              reinit_layers=False,
-              pruning_params=None):
+def get_vit(model_name, num_classes, mode, head_width, head_depth, layers_to_finetune,
+            layers_ranks):
+    assert model_name == "vit_b_16"
+    backbone = timm.create_model('vit_base_patch16_224_miil', pretrained=True)
+    model_layers = MODEL_LAYERS["vit_b_16"]
 
+    head_params = get_head_params(model_name, backbone, num_classes, head_depth, head_width)
+    if mode == 'linear':
+        layers_to_finetune = []
+        model = SelectiveFinetuneViT(backbone,
+                                     head_params=head_params,
+                                     layers_to_finetune=layers_to_finetune)
+
+    elif mode == 'finetune':
+        layers_to_finetune = model_layers
+        model = SelectiveFinetuneViT(backbone,
+                                     head_params=head_params,
+                                     layers_ranks=layers_ranks,
+                                     layers_to_finetune=layers_to_finetune)
+    elif mode == 'finetune_layers':
+        model = SelectiveFinetuneViT(backbone,
+                                     head_params=head_params,
+                                     layers_to_finetune=layers_to_finetune,
+                                     layers_ranks=layers_ranks)
+    else:
+        raise ValueError(
+            f"mode must be in ['linear', 'finetune', 'finetune_layers'], but got {mode}")
+
+    return model
+
+
+def get_resnet(model_name, num_classes, mode, head_width, head_depth, use_frozen_bb,
+               layers_to_finetune, reinit_layers):
     if model_name == "resnet50":
         weights = ResNet50_Weights.IMAGENET1K_V2
         backbone = models.resnet50(num_classes=1000, weights=weights)
-        model_class = SelectiveFinetuneResNet
         model_layers = MODEL_LAYERS["resnet50"]
     elif model_name == "resnet50dino":
         backbone = torch.hub.load('facebookresearch/dino:main', 'dino_resnet50')
         # hack for code consistency
         backbone.fc = nn.Linear(2048, 1000)
-        model_class = SelectiveFinetuneResNet
         model_layers = MODEL_LAYERS["resnet50"]
     elif model_name == "resnet18":
         backbone = models.resnet18(pretrained=True)
-        model_class = SelectiveFinetuneResNet
         model_layers = MODEL_LAYERS["resnet18"]
-    elif model_name == "vit_b_16":
-        backbone = vit_b_16(pretrained=True)
-        model_class = SelectiveFinetuneViT
-        model_layers = MODEL_LAYERS["vit_b_16"]
-    else:
-        raise ValueError(f"model_name must be in ['resnet50', 'resnet18'], but got {model_name}")
-
-    head_params = get_head_params(model_name, backbone, num_classes, head_depth, head_width,
-                                  sidenet_level)
 
     if mode == 'linear':
         layers_to_finetune = []
-        model = model_class(backbone,
-                            head_params=head_params,
-                            layers_to_finetune=layers_to_finetune,
-                            use_frozen_bb=use_frozen_bb,
-                            reinit_layers=reinit_layers)
     elif mode == 'finetune':
         layers_to_finetune = model_layers
-        model = model_class(backbone,
-                            head_params=head_params,
-                            layers_to_finetune=layers_to_finetune,
-                            use_frozen_bb=use_frozen_bb,
-                            reinit_layers=reinit_layers)
     elif mode == 'finetune_layers':
-        model = model_class(backbone,
-                            head_params=head_params,
-                            layers_to_finetune=layers_to_finetune,
-                            use_frozen_bb=use_frozen_bb,
-                            reinit_layers=reinit_layers)
+        pass
     else:
         raise ValueError(
             f"mode must be in ['linear', 'finetune', 'finetune_layers'], but got {mode}")
 
-    if pruning_params.use:
-        assert model_name == "resnet50", "Pruning is only supported for ResNet-50"
-        assert use_frozen_bb == False, "Pruning is not supported with siamese"
-        model = prune_resnet(model=model, **pruning_params)
+    head_params = get_head_params(model_name, backbone, num_classes, head_depth, head_width)
+
+    model = SelectiveFinetuneResNet(backbone,
+                                    head_params=head_params,
+                                    layers_to_finetune=layers_to_finetune)
+
+    return model
+
+
+def get_model(model_name,
+              num_classes,
+              mode,
+              head_width,
+              head_depth,
+              use_frozen_bb=True,
+              layers_to_finetune=None,
+              reinit_layers=False,
+              layers_ranks=None):
+    if "resnet" in model_name.lower():
+        model = get_resnet(model_name, num_classes, mode, head_width, head_depth, use_frozen_bb,
+                           layers_to_finetune, reinit_layers)
+    elif "vit" in model_name.lower():
+        model = get_vit(model_name, num_classes, mode, head_width, head_depth, layers_to_finetune,
+                        layers_ranks)
+    else:
+        raise ValueError(
+            f"model_name must be in ['resnet50', 'resnet18', 'vit_b_16'], but got {model_name}")
 
     return model
 
@@ -131,27 +147,24 @@ class LitModel(pl.LightningModule):
                  head_width: int = 64,
                  head_depth: int = 1,
                  optimizer: str = "sgd",
-                 sidenet_level: int = 3,
                  use_frozen_bb: bool = True,
                  layers_to_finetune: list = None,
                  reinit_layers: bool = False,
-                 pruning_params: dict = None):
+                 layers_ranks: list = None):
         super().__init__()
         assert mode in ['linear', 'finetune', 'finetune_layers']
 
         self.criterion = torch.nn.CrossEntropyLoss()
-        print(arch)
         self.model_parameters = dict(
             model_name=arch,
             num_classes=get_num_classes(dataset),
             mode=mode,
             head_width=head_width,
             head_depth=head_depth,
-            sidenet_level=sidenet_level,
             use_frozen_bb=use_frozen_bb,
             layers_to_finetune=layers_to_finetune,
             reinit_layers=reinit_layers,
-            pruning_params=pruning_params,
+            layers_ranks=layers_ranks,
         )
         self.initialize_model()
         with open('model.txt', 'w') as fp:

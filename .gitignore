@@ -9,3 +9,14 @@ wandb
 models
 checkpoints*
 model.txt
+.vscode/*
+.ARGO_ENV_GPU
+ssh_things/*
+ploting_graphs/*
+*.pdf
+*.png
+*.csv
+runs_data/*
+all_scripts/*
+workflow/*
+set_git.sh

@@ -1,8 +1,8 @@
 _target_: src.models.LitModel
 
 arch: resnet50
-learning_rate: 0.001
-weight_decay: 0.01
+learning_rate: 0.0001
+weight_decay: 0.00005
 schedule: cos
 head_depth: 1
 head_width: 64
@@ -10,13 +10,7 @@ optimizer: adamw
 use_frozen_bb: False
 layers_to_finetune: []
 reinit_layers: False
-pruning_params:
-  use: False
-  amount_to_prune: 0.5
-  pruner_type: "local"
-  pruning_norm: 1
-
-
+layers_ranks: -1  # -1 means train entire layer
 
 max_epochs: ${trainer.max_epochs}
 dataset: ${datamodule.dataset}
